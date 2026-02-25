@@ -125,7 +125,7 @@ void LCD_4BIT (void)
 	waitms(20); // Wait for clear screen command to finsih.
 }
 
-void LCDprint(char * string, unsigned char LCD_select, bit line, bit clear)
+void LCDprint(char * string, bit LCD_select, unsigned char line, bit clear)
 {
 	int j;
 
