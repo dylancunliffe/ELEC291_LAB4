@@ -230,20 +230,28 @@ int getsn (char * buff, int len)
 void main (void)
 {
 	char buff[17];
+	int line;
+	int lcd;
 	// Configure the LCD
 	LCD_4BIT();
 	
    	// Display something in the LCD
-	LCDprint("aaaaaaaaaaa", 1, 1, 0);
-	LCDprint("bbbbbbbbbbb", 2, 1, 0);
-	LCDprint("ccccccccccc", 1, 1, 1);
-	LCDprint("ddddddddddd", 2, 1, 1);
+	LCDprint("Print w/ Putty", 1, 1, 0);
 	while(1)
 	{
-		printf("Type what you want to display in line 2 (16 char max): ");
+		printf("What LCD do you want to write to? (1 or 2): ");
+		getsn(buff, sizeof(buff));
+		lcd=(int)buff[0];
+		printf("\n");
+		printf("What line do you want to write to? (1 or 2): ");
+		getsn(buff, sizeof(buff));
+		line=(int)buff[0];
+		printf("\n");
+		printf("Type what you want to display in line %d (16 char max): ", line);
 		getsn(buff, sizeof(buff));
 		printf("\n");
-		LCDprint(buff, 2, 1, 0);
-		LCDprint(buff, 2, 1, 1);
+
+		LCDprint(buff, line-48, 1, lcd-49);
+		LCDprint(buff, line-48, 1, lcd-49);
 	}
 }
