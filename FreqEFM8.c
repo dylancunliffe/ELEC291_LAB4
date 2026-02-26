@@ -136,15 +136,25 @@ void main (void)
 		F=overflow_count*0x10000L+TH0*0x100L+TL0;
 		C = 240000;
 		C /= (float)F;
+		C -= 6;
+		if (C < 0) {
+			C = 0;
+			F = 99999;
+		}
 
 		//printf("\rc=%fnF\n", C);
 		//printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
 		//printf("\rf=%luHz\n", F);
 		sprintf(buff, "Cap (nF): %.1f", C);
-		sprintf(freq, "Freq (Hz): %lu", F);
-
 		LCDprint(buff, 0, 1, 1);
-		LCDprint(freq, 0, 2, 1);
+
+		if(F == 99999) {
+			LCDprint("Freq (Hz): Error", 0, 2, 1);
+		}
+		else{
+			sprintf(freq, "Freq (Hz): %lu", F);
+			LCDprint(freq, 0, 2, 1);
+		}
 
 		enter_target = button_pin;
 		if (enter_target == 1) {
