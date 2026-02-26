@@ -8,22 +8,18 @@
 #define SYSCLK      72000000L  // SYSCLK frequency in Hz
 #define BAUDRATE      115200L  // Baud rate of UART in bps
 
-// 4-byte variables (Grouped together)
 unsigned long F;
 float tolerance = 0;
 float C;
 float target = 0.0f;
 float C_needed;
 
-// Arrays (Grouped together)
 char buff[17];
 char freq[16];
 
-// 1-byte variables (Grouped to pack tightly)
 unsigned char overflow_count;
 char connection;
 
-// Bit variables (Compiler packs these into a single byte)
 bit valid1 = 0;
 bit valid2 = 0;
 bit valid3 = 0;
