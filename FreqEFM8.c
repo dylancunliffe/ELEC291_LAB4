@@ -2,9 +2,7 @@
   
 #include <EFM8LB1.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "EFM8_LCD_4bit.h"
-#include <math.h>
 #include <string.h>
 
 #define SYSCLK      72000000L  // SYSCLK frequency in Hz
@@ -12,6 +10,7 @@
 
 // 4-byte variables (Grouped together)
 unsigned long F;
+float tolerance = 0;
 float C;
 float target = 0.0f;
 float C_needed;
@@ -19,7 +18,6 @@ float C_needed;
 // Arrays (Grouped together)
 char buff[17];
 char freq[16];
-char C_needed_str[10];
 
 // 1-byte variables (Grouped to pack tightly)
 unsigned char overflow_count;
@@ -28,6 +26,7 @@ char connection;
 // Bit variables (Compiler packs these into a single byte)
 bit valid1 = 0;
 bit valid2 = 0;
+bit valid3 = 0;
 bit enter_target = 0;
 bit target_active = 0;
 	
@@ -155,38 +154,56 @@ void main (void)
 		if (enter_target == 1) {
 			valid1 = 0;
 			valid2 = 0;
+			valid3 = 0;
 			LCDprint("Enter target", 0, 1, 1);
 			LCDprint("to see values.", 0, 2, 1);
 			LCDprint("Use putty", 1, 1, 1);
 			LCDprint("to set target.", 1, 2, 1);
 			while(valid2 != 1){	
-					printf("Enter target capacitance in nano Farads (nF): \n");
-					target = 0;
-					getsn(buff, sizeof(buff));
+				printf("Enter target capacitance in nano Farads (nF): \n");
+				target = 0;
+				getsn(buff, sizeof(buff));
 
-					for(i = 0; i < strlen(buff); i++){
-						target = (target * 10.0f) + (buff[i] - '0');
-					}
+				for(i = 0; i < strlen(buff); i++){
+					target = (target * 10.0f) + (buff[i] - '0');
+				}
 
-					printf("\n");
+				printf("\n");
 
-					if(target < 0 || target > 1000){
-						printf("Error: Invalid Entry. Enter again. \n");
-					}
-					else valid2 = 1;
+				if(target < 0 || target > 1000){
+					printf("Error: Invalid Entry. Enter again. \n");
+				}
+				else valid2 = 1;
+			}
+
+			while(valid3 != 1) {
+				printf("Enter target tolerance in percent (%): \n");
+				tolerance = 0;
+				getsn(buff, sizeof(buff));
+
+				for(i = 0; i < strlen(buff); i++){
+					tolerance = (tolerance * 10.0f) + (buff[i] - '0');
+				}
+
+				printf("\n");
+
+				if(tolerance < 0 || tolerance > 100){
+					printf("Error: Invalid Entry. Enter again. \n");
+				}
+				else valid3 = 1;
 			}
 
 			while(valid1 != 1) {
-					printf("Parallel (P) or series (S) connection? (Enter P or S): ");
-					connection = '\0';
-					getsn(buff, sizeof(buff));
-					connection = (char)buff[0];
-					printf("\n");
+				printf("Parallel (P) or series (S) connection? (Enter P or S): \n");
+				connection = '\0';
+				getsn(buff, sizeof(buff));
+				connection = (char)buff[0];
+				printf("\n");
 
-					if(connection != 'P' && connection != 'S' && connection != 'p' && connection != 's'){
-						printf("Error: Invalid Entry. Enter again. \n");
-					}
-					else valid1 = 1;
+				if(connection != 'P' && connection != 'S' && connection != 'p' && connection != 's'){
+					printf("Error: Invalid Entry. Enter again. \n");
+				}
+				else valid1 = 1;
 			}
 			enter_target = 0;
 			target_active = 1;
@@ -206,7 +223,7 @@ void main (void)
 				LCDprint("Overflow", 1, 2, 1);
 			}
 
-			if((C < (target * 1.1)) && (C > (target * 0.9))) {
+			if((C < (target * (1 + (tolerance / 100)))) && (C > (target * (1 - (tolerance / 100))))) {
 				LED_green_pin = 0;
 				LED_red_pin = 1;
 			}
@@ -215,9 +232,12 @@ void main (void)
 				LED_red_pin = 0;
 			}
 
-			if (C_needed < 9999 && C_needed > -9999) {
-				sprintf(C_needed_str, "%.1f nF", C_needed);
-				LCDprint(C_needed_str, 1, 2, 1);
+			if (LED_green_pin == 0) {
+				LCDprint("Within tolerance", 1, 2, 1);
+			}
+			else if (C_needed < 9999 && C_needed > -9999) {
+				sprintf(buff, "%.1f nF", C_needed);
+				LCDprint(buff, 1, 2, 1);
 			}
 			else {
 				LCDprint("Target too close", 1, 2, 1);
