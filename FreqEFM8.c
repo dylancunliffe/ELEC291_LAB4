@@ -2,16 +2,35 @@
   
 #include <EFM8LB1.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "EFM8_LCD_4bit.h"
+#include <math.h>
+#include <string.h>
 
 #define SYSCLK      72000000L  // SYSCLK frequency in Hz
 #define BAUDRATE      115200L  // Baud rate of UART in bps
 
-unsigned char overflow_count;
-char buff[17];
-char cap[16];
-char freq[16];
+// 4-byte variables (Grouped together)
+unsigned long F;
+float C;
+float target = 0.0f;
+float C_needed;
 
+// Arrays (Grouped together)
+char buff[17];
+char freq[16];
+char C_needed_str[10];
+
+// 1-byte variables (Grouped to pack tightly)
+unsigned char overflow_count;
+char connection;
+
+// Bit variables (Compiler packs these into a single byte)
+bit valid1 = 0;
+bit valid2 = 0;
+bit enter_target = 0;
+bit target_active = 0;
+	
 char _c51_external_startup (void)
 {
 	// Disable Watchdog with key sequence
@@ -90,9 +109,9 @@ void TIMER0_Init(void)
 
 void main (void) 
 {
-	unsigned long F;
-	float C;
-	
+	int i = 0;
+	LED_green_pin = 1;
+	LED_red_pin = 1;
 	TIMER0_Init();
 
 	// Configure the LCD
@@ -106,8 +125,9 @@ void main (void)
 	        "Compiled: %s, %s\n\n",
 	        __FILE__, __DATE__, __TIME__);
 
-	LCDprint("Frequency:", 0, 1, 1);
-	LCDprint("Capacitance:", 1, 1, 1);
+	LCDprint("Press button", 1, 1, 1);
+	LCDprint("to set target.", 1, 2, 1);
+
 
 	while(1)
 	{
@@ -119,16 +139,90 @@ void main (void)
 		waitms(1000);
 		TR0=0; // Stop Timer/Counter 0
 		F=overflow_count*0x10000L+TH0*0x100L+TL0;
-		printf("\rf=%luHz\n", F);
 		C = 240000;
 		C /= (float)F;
-		printf("\rc=%fnF\n", C);
 
-		sprintf(cap, "%.1f nF", C);
-		sprintf(freq, "%lu Hz", F);
+		//printf("\rc=%fnF\n", C);
+		//printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
+		//printf("\rf=%luHz\n", F);
+		sprintf(buff, "Cap (nF): %.1f", C);
+		sprintf(freq, "Freq (Hz): %lu", F);
+
+		LCDprint(buff, 0, 1, 1);
 		LCDprint(freq, 0, 2, 1);
-		LCDprint(cap, 1, 2, 1);
-		printf("\x1b[0K"); // ANSI: Clear from cursor to end of line.
+
+		enter_target = button_pin;
+		if (enter_target == 1) {
+			valid1 = 0;
+			valid2 = 0;
+			LCDprint("Enter target", 0, 1, 1);
+			LCDprint("to see values.", 0, 2, 1);
+			LCDprint("Use putty", 1, 1, 1);
+			LCDprint("to set target.", 1, 2, 1);
+			while(valid2 != 1){	
+					printf("Enter target capacitance in nano Farads (nF): \n");
+					target = 0;
+					getsn(buff, sizeof(buff));
+
+					for(i = 0; i < strlen(buff); i++){
+						target = (target * 10.0f) + (buff[i] - '0');
+					}
+
+					printf("\n");
+
+					if(target < 0 || target > 1000){
+						printf("Error: Invalid Entry. Enter again. \n");
+					}
+					else valid2 = 1;
+			}
+
+			while(valid1 != 1) {
+					printf("Parallel (P) or series (S) connection? (Enter P or S): ");
+					connection = '\0';
+					getsn(buff, sizeof(buff));
+					connection = (char)buff[0];
+					printf("\n");
+
+					if(connection != 'P' && connection != 'S' && connection != 'p' && connection != 's'){
+						printf("Error: Invalid Entry. Enter again. \n");
+					}
+					else valid1 = 1;
+			}
+			enter_target = 0;
+			target_active = 1;
+		}
+
+		if(target_active == 1){
+			if (connection == 'p' || connection == 'P') {
+    			C_needed = target - C;
+				LCDprint("Parallel nF req.:", 1, 1, 1);
+			}
+
+			else if (connection == 's' || connection == 'S'){
+    			C_needed = (float)(1 / ((1/target) - (1/C))); 
+				LCDprint("Series nF req.:", 1, 1, 1);
+			}
+			else {
+				LCDprint("Overflow", 1, 2, 1);
+			}
+
+			if((C < (target * 1.1)) && (C > (target * 0.9))) {
+				LED_green_pin = 0;
+				LED_red_pin = 1;
+			}
+			else {
+				LED_green_pin = 1;
+				LED_red_pin = 0;
+			}
+
+			if (C_needed < 9999 && C_needed > -9999) {
+				sprintf(C_needed_str, "%.1f nF", C_needed);
+				LCDprint(C_needed_str, 1, 2, 1);
+			}
+			else {
+				LCDprint("Target too close", 1, 2, 1);
+			}
+
+		}
 	}
-	
 }

@@ -9,7 +9,9 @@
 #define LCD_D6 P1_1
 #define LCD_D7 P1_0
 #define CHARS_PER_LINE 16
-
+#define LED_green_pin P2_5
+#define LED_red_pin P2_6
+#define button_pin P3_0
 
 // Uses Timer3 to delay <us> micro-seconds. 
 void Timer3us(unsigned char us)
