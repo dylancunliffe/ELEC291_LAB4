@@ -151,6 +151,8 @@ void main (void)
 			valid1 = 0;
 			valid2 = 0;
 			valid3 = 0;
+			LED_green_pin = 1;
+			LED_red_pin = 1;
 			LCDprint("Enter target", 0, 1, 1);
 			LCDprint("to see values.", 0, 2, 1);
 			LCDprint("Use putty", 1, 1, 1);
